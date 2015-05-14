@@ -1,0 +1,25 @@
+<html>
+<head>
+</head>
+<body>
+<form method="PUT" enctype="multipart/form-data" id='uploadfile'>
+        <input type="file" name="file" id="file">
+ </form>
+ <button onclick="upload()"> Upload </button>
+</body>
+<script>
+function upload() {
+        var xhr = new XMLHttpRequest();
+        try {
+            var fd = new FormData(document.getElementById('uploadfile'));
+            alert(fd);
+            xhr.open("PUT","/images/1");
+            xhr.send(fd);
+        }
+        catch (e) {
+            alert (e)
+        }
+        return false;
+    }
+</script>
+</html>
