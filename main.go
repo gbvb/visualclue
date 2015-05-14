@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
 
 	"github.com/codegangsta/negroni"
 	"github.com/gorilla/mux"
@@ -22,8 +24,10 @@ import (
 	POST /:id - Creates an empty collection
 	POST /:id/:imageid - Adds :imageid to the list :id (creating ;id when one does not exist)
 	PUT /:id/:imageid - replaces the current :imageid
-	DELETE /:id/:imageid - deletes a specific image
+	DELETE /:id/:imageid - deletes a specific image from the collection
 	DELETE /:id  - deletes the collection
+	POST /images/:imageid - add an image
+	GET /images/:imageid - retrieve the image
 
 
 	* provide a url addressable endpoint to see those images in sequence
@@ -38,6 +42,7 @@ func main() {
 	mux.HandleFunc("/{colname}/{id:[0-9]+}", GetSpecificImageAndAttributes).Methods("GET")
 	mux.HandleFunc("/{colname}", CreateNamedCollection).Methods("POST")
 	mux.HandleFunc("/{colname}/{id:[0-9]+}", AddToCollection).Methods("POST")
+	mux.HandleFunc("/images/{imageid:[0-9]+}", AddImage).Methods("PUT").Headers("Content-Type", "multipart/form-data")
 
 	n := negroni.Classic()
 	n.UseHandler(mux)
@@ -68,8 +73,41 @@ func CreateNamedCollection(w http.ResponseWriter, req *http.Request) {
 }
 
 type image_attributes struct {
-	Name  string
-	Timer int
+	Name    string //Name for the image
+	Time    int    //Time in milliseconds on this image. -1 to not proceed next
+	ImageId int    //image id
+}
+
+//Add an image as an upload
+func AddImage(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	image_id := vars["imageid"]
+	fmt.Fprintf(w, "imageid: %v", image_id)
+
+	file, _, err := req.FormFile("file")
+
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return
+	}
+
+	defer file.Close()
+
+	out, err := os.Create("/tmp/img")
+	if err != nil {
+		fmt.Fprintf(w, "unable to create file for writing")
+		return
+	}
+
+	defer out.Close()
+
+	_, err = io.Copy(out, file)
+	if err != nil {
+		fmt.Fprintln(w, err)
+		return
+	}
+
+	return
 }
 
 func AddToCollection(w http.ResponseWriter, req *http.Request) {
